@@ -1,3 +1,6 @@
-deps
 *.exe
+*.log
+gateway.json
+deps
 token.txt
+start.bat
