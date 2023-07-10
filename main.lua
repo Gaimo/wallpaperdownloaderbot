@@ -1,14 +1,15 @@
-local discordia = require('discordia')
-local sql = require ('sqlite3')
+local discordia = require('discordia') -- Importing discordia
+local sql = require ('sqlite3') -- Importing sqlite3
 
 local client = discordia.Client()
 local conn = sql.open("files/database.db")
 
--- Importando a biblioteca de string
+-- Importing some extensions
 discordia.extensions.string()
 discordia.extensions.table()
 
 local function print_table(node)
+    -- Função responsavel por imprimir uma tabela
     local cache, stack, output = {},{},{}
     local depth = 1
     local output_str = "{\n"
@@ -87,8 +88,8 @@ local function print_table(node)
     print(output_str)
 end
 
--- Função para ler o token do arquivo
 local function readTokenFromFile()
+    -- Função para ler o token do arquivo token.txt
     local file = io.open('token.txt', 'r')
     if file then
         local token = file:read('*all')
@@ -98,13 +99,13 @@ local function readTokenFromFile()
     return nil
 end
 
--- Função para verificar se a url é válida.
 local function isValidURL(url)
+    -- Função para verificar se a url é válida.
     return url:startswith("https://steamcommunity.com/sharedfiles/filedetails/?id=", true)
 end
 
--- Função para limpar os argumentos da url.
 local function clearURLSearchText(url)
+    -- Função para limpar os argumentos da url.
     return url:split("&")[1]
 end
 
@@ -162,43 +163,108 @@ local function addWallpaperInRequests(wallpaperID, wallpaperURL)
     conn:exec(query)
 end
 
+local function getWallpapersFromRequestsTable()
+    local query = "SELECT wallpaperURL FROM requests LIMIT 10"
+    local result = conn:exec(query)
+
+    if result then
+        return result
+    else
+        return {} -- Retorna uma tabela vazia se nenhum resultado for encontrado
+    end
+end
+
+
+local function getWallpapersCommand(message)
+    local wallpapers = getWallpapersFromRequestsTable().wallpaperURL
+    -- print_table(wallpapers)
+
+    if wallpapers and #wallpapers > 0 then
+        local response = "Os 10 wallpapers mais recentes solicitados são:\n\n"
+
+        for i, wallpaper in ipairs(wallpapers) do
+            local wallpaperID = string.split(wallpaper, "=")[2]
+            response = response .. string.format("Wallpaper %d:\nID: %s\nURL: %s\n\n", i, wallpaperID, wallpaper)
+        end
+
+        message:reply(response)
+    else
+        message:reply("Não foram encontrados wallpapers solicitados.")
+    end
+end
+
+local function addWallpaperCommand(message)
+    -- Verifica se o usuário tem permissão para executar o comando
+    if not message.member:hasPermission(discordia.enums.permission.administrator) then
+        return message:reply("Você não tem permissão para executar esse comando.")
+    end
+
+    -- Obtém os argumentos do comando
+    local args = string.split(message.content, " ")
+    local wallpaperID = tonumber(args[2])
+    local wallpaperURL = args[3]
+
+    -- Verifica se os argumentos são válidos
+    if not wallpaperID or not wallpaperURL then
+        return message:reply("Argumentos inválidos. Utilize o comando da seguinte forma: !addwallpaper <wallpaperID> <wallpaperURL>")
+    end
+
+    -- Remove o registro da tabela "requests" com o mesmo wallpaperID
+    local deleteQuery = string.format("DELETE FROM requests WHERE wallpaperID = %d", wallpaperID)
+    conn:exec(deleteQuery)
+
+    -- Insere o registro na tabela "wallpapers"
+    local insertQuery = string.format("INSERT INTO wallpapers (wallpaperID, wallpaperURL) VALUES (%d, '%s')", wallpaperID, wallpaperURL)
+    conn:exec(insertQuery)
+
+    return message:reply("Wallpaper adicionado com sucesso na tabela 'wallpapers'.")
+end
+
+local function downloadWallpaperCommand(message)
+    -- Armazena em uma tabela de forma separada o comando e a url
+    local args = string.split(message.content, " ")
+
+    -- Armazena a url limpa
+    local wallpaperURL = clearURLSearchText(args[2])
+
+    if not isValidURL(wallpaperURL) then 
+        return message:reply("A url enviada não é valida!")
+    end
+
+    local wallpaperID = getWallpaperIDFromURL(wallpaperURL)
+    local wallpaperDownloadURL = wallpaperDownloadURLExists(wallpaperID)
+
+    if wallpaperDownloadURL then
+        message:reply(string.format("Aqui está o download do wallpaper solicitado: %s", wallpaperDownloadURL))
+        message:delete()
+        return
+    end
+
+    if wallpaperRequestExists(wallpaperID) then
+        message:reply("Este wallpaper já foi solicitado, aguarde 24 horas e tente novamente.")
+        message:delete()
+        return
+    end
+
+    addWallpaperInRequests(wallpaperID, wallpaperURL)
+    message:reply("Seu wallpaper foi adicionado aos pedidos, em breve será baixado, tente novamente em 24 horas.")
+    message:delete()
+end
+
 client:on('ready', function()
     print('Logged in as '.. client.user.username)
     setupDB()
 end)
 
 client:on('messageCreate', function(message)
-    -- Armazena em uma tabela de forma separada o comando e a url
-    local messageContentTable = string.split(message.content, " ")
-    -- Armazena o comando
-    local command = messageContentTable[1]
+    local content = message.content
 
-    if command == "!download" then
-        -- Armazena a url limpa
-        local wallpaperURL = clearURLSearchText(messageContentTable[2])
-
-        if not isValidURL(wallpaperURL) then 
-            return message:reply("A url enviada não é valida!")
-        end
-
-        local wallpaperID = getWallpaperIDFromURL(wallpaperURL)
-        local wallpaperDownloadURL = wallpaperDownloadURLExists(wallpaperID)
-
-        if wallpaperDownloadURL then
-            message:reply(string.format("Aqui está o download do wallpaper solicitado: %s", wallpaperDownloadURL))
-            -- message:delete()
-            return
-        end
-
-        if wallpaperRequestExists(wallpaperID) then
-            message:reply("Este wallpaper já foi solicitado, aguarde 24 horas e tente novamente.")
-            -- message:delete()
-            return
-        end
-
-        addWallpaperInRequests(wallpaperID, wallpaperURL)
-        message:reply("Seu wallpaper foi adicionado aos pedidos, em breve será baixado, tente novamente em 24 horas.")
-        -- message:delete()
+    if content:startswith("!requests") then
+        getWallpapersCommand(message)
+    elseif content:startswith("!addwallpaper") then
+        addWallpaperCommand(message)
+    elseif content:startswith("!get") then
+        downloadWallpaperCommand(message)
     end
 end)
 
