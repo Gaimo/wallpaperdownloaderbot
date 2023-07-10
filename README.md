@@ -1,5 +1,7 @@
 # wallpaperdownloaderbot
 
+O projeto ainda não está pronto, estou criando suas funcionalidades conforme tenho tempo!
+
 ## Como usar
 
 1) Comece instalando o [luvit](https://luvit.io/install.html)
