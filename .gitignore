@@ -1,5 +1,6 @@
 *.exe
 *.log
+*.db
 gateway.json
 deps
 token.txt
