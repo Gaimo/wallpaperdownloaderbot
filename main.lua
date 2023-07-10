@@ -106,6 +106,7 @@ end
 
 local function clearURLSearchText(url)
     -- Função para limpar os argumentos da url.
+    if not url then return false end
     return url:split("&")[1]
 end
 
@@ -159,7 +160,6 @@ end
 
 local function addWallpaperInRequests(wallpaperID, wallpaperURL)
     local query = string.format("INSERT INTO requests(wallpaperID, wallpaperURL) VALUES(%d, '%s')", wallpaperID, wallpaperURL)
-    print(query)
     conn:exec(query)
 end
 
@@ -227,7 +227,7 @@ local function downloadWallpaperCommand(message)
     -- Armazena a url limpa
     local wallpaperURL = clearURLSearchText(args[2])
 
-    if not isValidURL(wallpaperURL) then 
+    if not wallpaperURL or not isValidURL(wallpaperURL) then 
         return message:reply("A url enviada não é valida!")
     end
 
