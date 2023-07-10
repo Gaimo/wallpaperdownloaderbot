@@ -261,7 +261,7 @@ client:on('messageCreate', function(message)
 
     if content:startswith("!requests") then
         getWallpapersCommand(message)
-    elseif content:startswith("!addwallpaper") then
+    elseif content:startswith("!add") then
         addWallpaperCommand(message)
     elseif content:startswith("!get") then
         downloadWallpaperCommand(message)
