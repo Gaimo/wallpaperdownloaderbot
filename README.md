@@ -2,7 +2,7 @@
 
 ## Como usar
 
-1) Comece instalando o luvit [luvit](https://luvit.io/install.html)
+1) Comece instalando o [luvit](https://luvit.io/install.html)
 2) Instale o [discordia](https://github.com/SinisterRectus/Discordia)
 3) Crie um arquivo chamado token.txt e coloque o token do bot dentro do arquivo.
 4) Inicie o bot ./luvit main.lua (linux) | luvit main.lua no cmd (windows)
